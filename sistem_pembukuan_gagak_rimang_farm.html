@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAGAK RIMANG FARM - Sistem Pembukuan & Manajemen Aviary</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom Scrollbar for smooth table scrolling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .tab-active {
+            background-color: #065f46;
+            color: #ffffff;
+            border-left: 4px solid #f59e0b;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-emerald-200 selection:text-emerald-900">
+
+    <!-- Toast Notification Container (Replaces alert) -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- Custom Confirmation Modal (Replaces confirm) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 transform transition-all">
+            <div class="flex items-center gap-3 text-rose-600 mb-3">
+                <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900" id="confirm-title">Konfirmasi Hapus</h3>
+            </div>
+            <p class="text-slate-600 text-sm mb-6" id="confirm-message">Apakah Anda yakin ingin menghapus data ini? Tindakan ini akan memengaruhi kalkulasi laporan keuangan.</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                <button id="confirm-yes-btn" class="px-4 py-2 rounded-xl text-sm font-medium bg-rose-600 text-white hover:bg-rose-700 shadow-sm transition">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Set Modal Awal -->
+    <div id="capital-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-vault text-emerald-600 mr-2"></i>Atur Modal Awal Disetor</h3>
+                <button onclick="closeCapitalModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 mb-4">Masukkan total dana kas awal yang disiapkan untuk operasional & pembangunan GAGAK RIMANG FARM (Tidak termasuk nilai tanah).</p>
+            <form onsubmit="saveInitialCapital(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Jumlah Modal Awal (IDR)</label>
+                    <input type="number" id="input-initial-capital" min="0" step="1000" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-lg font-semibold" placeholder="0">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeCapitalModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl text-sm font-medium bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm">Simpan Modal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Layout Wrapper -->
+    <div class="min-h-screen flex flex-col lg:flex-row">
+        
+        <!-- Mobile Header -->
+        <header class="lg:hidden bg-emerald-900 text-white p-4 flex items-center justify-between sticky top-0 z-30 shadow-md">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500 text-emerald-950 flex items-center justify-center font-bold text-lg shadow">
+                    <i class="fa-solid fa-dove"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm tracking-wide">GAGAK RIMANG FARM</h1>
+                    <p class="text-[11px] text-emerald-200">Aviary Accounting & ERP</p>
+                </div>
+            </div>
+            <button onclick="toggleMobileSidebar()" class="p-2 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </header>
+
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-emerald-950 text-slate-200 transform -translate-x-full lg:translate-x-0 lg:static lg:inset-0 transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-xl">
+            <div>
+                <!-- Brand Logo -->
+                <div class="p-6 border-b border-emerald-900/80 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-emerald-950 flex items-center justify-center font-bold text-xl shadow-lg">
+                            <i class="fa-solid fa-feather-pointed"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-white text-base tracking-wide leading-tight">GAGAK RIMANG</h1>
+                            <span class="text-xs font-semibold text-amber-400 tracking-widest uppercase">FARM & AVIARY</span>
+                        </div>
+                    </div>
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden text-emerald-300 hover:text-white">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Menu -->
+                <nav class="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)]">
+                    <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2 mt-1">Utama & Laporan</p>
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70 tab-active">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                        <span>Dashboard & Keuangan</span>
+                    </button>
+                    <button onclick="switchTab('evaluasi')" id="nav-evaluasi" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
+                        <span>Evaluasi & KPI Farm</span>
+                    </button>
+
+                    <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2 mt-5">Pembukuan Kas</p>
+                    <button onclick="switchTab('pembangunan')" id="nav-pembangunan" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-hammer w-5 text-center"></i>
+                        <span>1. Pembangunan Aviary</span>
+                    </button>
+                    <button onclick="switchTab('operasional')" id="nav-operasional" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-receipt w-5 text-center"></i>
+                        <span>2. Pengeluaran Harian</span>
+                    </button>
+                    <button onclick="switchTab('pemasukan')" id="nav-pemasukan" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-hand-holding-dollar w-5 text-center"></i>
+                        <span>3. Pemasukan / Penjualan</span>
+                    </button>
+
+                    <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-400/80 mb-2 mt-5">Manajemen Ternak</p>
+                    <button onclick="switchTab('inventaris')" id="nav-inventaris" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-crow w-5 text-center"></i>
+                        <span>4. Inventaris Burung</span>
+                    </button>
+                    <button onclick="switchTab('breeding')" id="nav-breeding" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition hover:bg-emerald-900/70">
+                        <i class="fa-solid fa-egg w-5 text-center"></i>
+                        <span>5. Perkembangbiakan</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer / Export -->
+            <div class="p-4 border-t border-emerald-900/80 bg-emerald-950/90 space-y-2">
+                <button onclick="exportAllToCSV()" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-sm">
+                    <i class="fa-solid fa-file-csv"></i>
+                    <span>Unduh Laporan (CSV)</span>
+                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportBackupJSON()" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-emerald-100 text-[11px] font-medium transition border border-emerald-700/50" title="Simpan cadangan database ke HP/PC">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Backup</span>
+                    </button>
+                    <label class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-900 hover:bg-emerald-800 text-emerald-100 text-[11px] font-medium transition border border-emerald-700/50 cursor-pointer" title="Pulihkan data dari file backup">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>Restore</span>
+                        <input type="file" accept=".json" onchange="importBackupJSON(event)" class="hidden">
+                    </label>
+                </div>
+                <div class="text-[11px] text-emerald-400/80 text-center pt-1 flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Auto-Save Aktif • Tanpa Tanah</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-full overflow-x-hidden">
+            
+            <!-- Top Bar Context & Quick Action -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
+                <div>
+                    <h2 id="page-title" class="text-2xl font-bold text-slate-900">Dashboard & Laporan Keuangan</h2>
+                    <p id="page-subtitle" class="text-sm text-slate-500">Ringkasan arus kas, aset, dan profitabilitas GAGAK RIMANG FARM secara real-time.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="openCapitalModal()" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-sm flex items-center gap-2 transition">
+                        <i class="fa-solid fa-vault text-emerald-600"></i>
+                        <span>Modal Awal: <strong id="header-capital-display" class="text-emerald-700">Rp0</strong></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- TAB 0: DASHBOARD & LAPORAN KEUANGAN        -->
+            <!-- ========================================== -->
+            <section id="section-dashboard" class="tab-section space-y-6">
+                
+                <!-- 4 Highlight Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <!-- Saldo Kas -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo Kas Tersedia</p>
+                                <h3 id="dash-saldo-kas" class="text-2xl font-bold text-slate-900 mt-1">Rp0</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                <i class="fa-solid fa-wallet text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">(Modal + Pemasukan) - Total Keluar</p>
+                    </div>
+
+                    <!-- Total Biaya Pembangunan -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Biaya Pembangunan</p>
+                                <h3 id="dash-total-capex" class="text-2xl font-bold text-amber-600 mt-1">Rp0</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                                <i class="fa-solid fa-trowel-bricks text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">Investasi Fisik Aviary (CAPEX)</p>
+                    </div>
+
+                    <!-- Total Modal Operasional -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Biaya Operasional</p>
+                                <h3 id="dash-total-opex" class="text-2xl font-bold text-rose-600 mt-1">Rp0</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                                <i class="fa-solid fa-cart-shopping text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">Pakan, Obat, Rawat Harian (OPEX)</p>
+                    </div>
+
+                    <!-- Total Pemasukan -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Pemasukan</p>
+                                <h3 id="dash-total-income" class="text-2xl font-bold text-emerald-600 mt-1">Rp0</h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                <i class="fa-solid fa-sack-dollar text-lg"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">Penjualan Ternak & Hasil Farm</p>
+                    </div>
+                </div>
+
+                <!-- Laporan Posisi Keuangan Lengkap & Nilai Aset -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Tabel Laporan Keuangan Utama -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                        <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-scale-balanced text-emerald-600 mr-2"></i>Laporan Posisi Keuangan Otomatis</h3>
+                            <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Realtime IDR</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-3 px-5">Komponen Laporan</th>
+                                        <th class="py-3 px-5">Keterangan Perhitungan</th>
+                                        <th class="py-3 px-5 text-right">Nilai (IDR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr>
+                                        <td class="py-3 px-5 font-medium text-slate-800">Modal Awal Disetor</td>
+                                        <td class="py-3 px-5 text-xs text-slate-500">Dana kas awal pemilik</td>
+                                        <td id="rep-modal-awal" class="py-3 px-5 text-right font-semibold">Rp0</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3 px-5 font-medium text-slate-800">Total Biaya Pembangunan (CAPEX)</td>
+                                        <td class="py-3 px-5 text-xs text-slate-500">Akumulasi Pembukuan Pembangunan</td>
+                                        <td id="rep-capex" class="py-3 px-5 text-right font-semibold text-amber-600">Rp0</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3 px-5 font-medium text-slate-800">Total Modal Operasional (OPEX)</td>
+                                        <td class="py-3 px-5 text-xs text-slate-500">Akumulasi Pengeluaran Harian</td>
+                                        <td id="rep-opex" class="py-3 px-5 text-right font-semibold text-rose-600">Rp0</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-3 px-5 font-medium text-slate-800">Total Pemasukan (Omzet)</td>
+                                        <td class="py-3 px-5 text-xs text-slate-500">Akumulasi Penjualan & Pendapatan</td>
+                                        <td id="rep-income" class="py-3 px-5 text-right font-semibold text-emerald-600">Rp0</td>
+                                    </tr>
+                                    <tr class="bg-slate-50/80">
+                                        <td class="py-3.5 px-5 font-bold text-slate-900">Laba / Rugi Operasional</td>
+                                        <td class="py-3.5 px-5 text-xs text-slate-500">Total Pemasukan - Total Operasional</td>
+                                        <td id="rep-profit-op" class="py-3.5 px-5 text-right font-bold text-slate-900">Rp0</td>
+                                    </tr>
+                                    <tr class="bg-slate-50/80">
+                                        <td class="py-3.5 px-5 font-bold text-slate-900">Laba / Rugi Bersih (BEP)</td>
+                                        <td class="py-3.5 px-5 text-xs text-slate-500">Total Pemasukan - (CAPEX + OPEX)</td>
+                                        <td id="rep-profit-net" class="py-3.5 px-5 text-right font-bold text-slate-900">Rp0</td>
+                                    </tr>
+                                    <tr class="bg-emerald-50/60">
+                                        <td class="py-4 px-5 font-bold text-emerald-950">Total Nilai Aset Peternakan</td>
+                                        <td class="py-4 px-5 text-xs text-emerald-800">Fisik Aviary + Aset Burung Hidup + Saldo Kas</td>
+                                        <td id="rep-total-aset" class="py-4 px-5 text-right font-bold text-base text-emerald-800">Rp0</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Periodik (Harian, Mingguan, Bulanan, Tahunan) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-slate-800"><i class="fa-solid fa-calendar-days text-amber-500 mr-2"></i>Rekap Arus Kas Periodik</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-4">Filter otomatis berdasarkan tanggal transaksi yang tercatat pada sistem.</p>
+                            
+                            <div class="space-y-3">
+                                <!-- Harian -->
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-700 uppercase">Hari Ini (<span id="label-today">-</span>)</span>
+                                        <span id="recap-day-net" class="text-xs font-bold text-slate-800">Rp0</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Masuk: <strong id="recap-day-in" class="text-emerald-600">Rp0</strong></span>
+                                        <span>Keluar: <strong id="recap-day-out" class="text-rose-600">Rp0</strong></span>
+                                    </div>
+                                </div>
+
+                                <!-- Mingguan -->
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-700 uppercase">7 Hari Terakhir</span>
+                                        <span id="recap-week-net" class="text-xs font-bold text-slate-800">Rp0</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Masuk: <strong id="recap-week-in" class="text-emerald-600">Rp0</strong></span>
+                                        <span>Keluar: <strong id="recap-week-out" class="text-rose-600">Rp0</strong></span>
+                                    </div>
+                                </div>
+
+                                <!-- Bulanan -->
+                                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-700 uppercase">Bulan Ini (<span id="label-month">-</span>)</span>
+                                        <span id="recap-month-net" class="text-xs font-bold text-slate-800">Rp0</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>Masuk: <strong id="recap-month-in" class="text-emerald-600">Rp0</strong></span>
+                                        <span>Keluar: <strong id="recap-month-out" class="text-rose-600">Rp0</strong></span>
+                                    </div>
+                                </div>
+
+                                <!-- Tahunan -->
+                                <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/70">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-emerald-900 uppercase">Tahun Ini (<span id="label-year">-</span>)</span>
+                                        <span id="recap-year-net" class="text-xs font-bold text-emerald-900">Rp0</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-emerald-800">
+                                        <span>Masuk: <strong id="recap-year-in" class="text-emerald-700">Rp0</strong></span>
+                                        <span>Keluar: <strong id="recap-year-out" class="text-rose-600">Rp0</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-400">
+                            *Pengeluaran mencakup CAPEX & OPEX sesuai tanggal nota.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riwayat Semua Transaksi Gabungan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-800"><i class="fa-solid fa-clock-rotate-left text-slate-600 mr-2"></i>Riwayat Seluruh Transaksi (Buku Besar)</h3>
+                        <select id="filter-ledger-type" onchange="renderAll()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-medium bg-white outline-none">
+                            <option value="ALL">Semua Jenis Transaksi</option>
+                            <option value="CAPEX">Pembangunan Aviary (CAPEX)</option>
+                            <option value="OPEX">Pengeluaran Harian (OPEX)</option>
+                            <option value="INCOME">Pemasukan / Penjualan</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">Tanggal</th>
+                                    <th class="py-3 px-4">Modul</th>
+                                    <th class="py-3 px-4">Kategori</th>
+                                    <th class="py-3 px-4">Keterangan</th>
+                                    <th class="py-3 px-4 text-center">Qty</th>
+                                    <th class="py-3 px-4 text-right">Harga Satuan</th>
+                                    <th class="py-3 px-4 text-right">Total</th>
+                                    <th class="py-3 px-4 text-center">Jenis</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-all-ledger" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="8" class="py-8 text-center text-slate-400 text-sm">Belum ada riwayat transaksi. Mulai catat transaksi pada menu di sebelah kiri.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 1: PEMBUKUAN PEMBANGUNAN AVIARY        -->
+            <!-- ========================================== -->
+            <section id="section-pembangunan" class="tab-section hidden space-y-6">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-amber-900 text-xs">
+                    <i class="fa-solid fa-circle-info text-amber-600 text-base mt-0.5"></i>
+                    <div>
+                        <p class="font-bold">Ketentuan Pembukuan Pembangunan (CAPEX):</p>
+                        <p class="mt-0.5">Catat seluruh pembelian material bangunan, kayu, besi, kawat ram, atap, semen, pasir, bata, upah tukang, instalasi listrik/air, peralatan, serta perlengkapan aviary. <strong>Jangan memasukkan biaya pembelian tanah/lahan.</strong></p>
+                    </div>
+                </div>
+
+                <!-- Form Input Pembangunan -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></span>
+                        Catat Pengeluaran Pembangunan Aviary
+                    </h3>
+                    <form onsubmit="addTransaction(event, 'CAPEX')" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+                            <input type="date" id="capex-date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Pembangunan</label>
+                            <select id="capex-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Bahan Bangunan">Pembelian Bahan Bangunan</option>
+                                <option value="Kayu, Besi, Kawat Ram & Atap">Kayu, Besi, Kawat Ram & Atap</option>
+                                <option value="Semen, Pasir & Batu Bata">Semen, Pasir & Batu Bata</option>
+                                <option value="Upah Tukang">Upah Tukang</option>
+                                <option value="Instalasi Listrik & Air">Instalasi Listrik & Air</option>
+                                <option value="Peralatan Pembangunan">Peralatan Pembangunan</option>
+                                <option value="Perlengkapan Tambahan Aviary">Perlengkapan Tambahan Aviary</option>
+                            </select>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan Detail Barang / Jasa</label>
+                            <input type="text" id="capex-desc" required placeholder="Contoh: Kawat ram galvanis 1 roll & reng kayu" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Barang</label>
+                            <input type="number" id="capex-qty" min="0.1" step="any" value="1" required oninput="calcPreview('capex')" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Satuan</label>
+                            <input type="text" id="capex-unit" required placeholder="Roll / Sak / Hari" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Satuan (IDR)</label>
+                            <input type="number" id="capex-price" min="0" step="100" required oninput="calcPreview('capex')" placeholder="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2 flex flex-col justify-end">
+                            <div class="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex justify-between items-center">
+                                <span class="text-xs text-slate-500">Total Harga:</span>
+                                <span id="capex-preview-total" class="font-bold text-amber-700 text-sm">Rp0</span>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-6 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-save"></i> Simpan Biaya Pembangunan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Pembangunan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Daftar Biaya Pembangunan Aviary</h3>
+                        <span class="text-sm font-bold text-amber-700 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">Total: <span id="table-total-capex">Rp0</span></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">Tanggal</th>
+                                    <th class="py-3 px-4">Kategori</th>
+                                    <th class="py-3 px-4">Keterangan</th>
+                                    <th class="py-3 px-4 text-center">Jumlah</th>
+                                    <th class="py-3 px-4 text-right">Harga Satuan</th>
+                                    <th class="py-3 px-4 text-right">Total Harga</th>
+                                    <th class="py-3 px-4 text-center">Jenis</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-capex" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 2: PEMBUKUAN PENGELUARAN HARIAN        -->
+            <!-- ========================================== -->
+            <section id="section-operasional" class="tab-section hidden space-y-6">
+                <!-- Form Input Operasional -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></span>
+                        Catat Pengeluaran Operasional Harian (OPEX)
+                    </h3>
+                    <form onsubmit="addTransaction(event, 'OPEX')" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+                            <input type="date" id="opex-date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Operasional</label>
+                            <select id="opex-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Pakan Bijian">Pakan Bijian (Kenari Seed/Milet)</option>
+                                <option value="Telur Puyuh">Telur Puyuh</option>
+                                <option value="Sayuran dan Buah">Sayuran dan Buah (Sawi/Apel/Jagung)</option>
+                                <option value="Egg Food">Egg Food</option>
+                                <option value="Vitamin dan Suplemen">Vitamin dan Suplemen</option>
+                                <option value="Obat-obatan Burung">Obat-obatan Burung</option>
+                                <option value="Obat Anti-Kutu dan Semut">Obat Anti-Kutu dan Semut</option>
+                                <option value="Pasir dan Perlengkapan Kandang">Pasir dan Perlengkapan Kandang</option>
+                                <option value="Perawatan dan Kebersihan Aviary">Perawatan dan Kebersihan Aviary</option>
+                                <option value="Biaya Listrik dan Air">Biaya Listrik dan Air</option>
+                                <option value="Pengeluaran Tidak Terduga">Pengeluaran Tidak Terduga</option>
+                            </select>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan Transaksi</label>
+                            <input type="text" id="opex-desc" required placeholder="Contoh: Canary seed kiloan + 2 papan telur puyuh" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Barang</label>
+                            <input type="number" id="opex-qty" min="0.1" step="any" value="1" required oninput="calcPreview('opex')" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Satuan</label>
+                            <input type="text" id="opex-unit" required placeholder="Kg / Papan / Botol" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Satuan (IDR)</label>
+                            <input type="number" id="opex-price" min="0" step="100" required oninput="calcPreview('opex')" placeholder="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2 flex flex-col justify-end">
+                            <div class="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex justify-between items-center">
+                                <span class="text-xs text-slate-500">Total Harga:</span>
+                                <span id="opex-preview-total" class="font-bold text-rose-600 text-sm">Rp0</span>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-6 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-save"></i> Simpan Pengeluaran Harian
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Operasional -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Daftar Pengeluaran Harian (OPEX)</h3>
+                        <span class="text-sm font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-xl border border-rose-200">Total: <span id="table-total-opex">Rp0</span></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">Tanggal</th>
+                                    <th class="py-3 px-4">Kategori</th>
+                                    <th class="py-3 px-4">Keterangan</th>
+                                    <th class="py-3 px-4 text-center">Jumlah</th>
+                                    <th class="py-3 px-4 text-right">Harga Satuan</th>
+                                    <th class="py-3 px-4 text-right">Total Harga</th>
+                                    <th class="py-3 px-4 text-center">Jenis</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-opex" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 3: PEMBUKUAN PEMASUKAN                 -->
+            <!-- ========================================== -->
+            <section id="section-pemasukan" class="tab-section hidden space-y-6">
+                <!-- Form Input Pemasukan -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></span>
+                        Catat Pemasukan / Penjualan Peternakan
+                    </h3>
+                    <form onsubmit="addTransaction(event, 'INCOME')" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+                            <input type="date" id="income-date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Sumber Pemasukan</label>
+                            <select id="income-category" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Penjualan Anakan Kenari">Penjualan Anakan Kenari</option>
+                                <option value="Penjualan Kenari Dewasa">Penjualan Kenari Dewasa</option>
+                                <option value="Penjualan Indukan">Penjualan Indukan</option>
+                                <option value="Penjualan Telur">Penjualan Telur</option>
+                                <option value="Penjualan Burung Afkir">Penjualan Burung Afkir</option>
+                                <option value="Pendapatan Lainnya">Pendapatan Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="lg:col-span-3">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan Penjualan</label>
+                            <input type="text" id="income-desc" required placeholder="Contoh: Penjualan anakan AF kuning ring GRF-004" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Barang</label>
+                            <input type="number" id="income-qty" min="1" step="any" value="1" required oninput="calcPreview('income')" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Satuan</label>
+                            <input type="text" id="income-unit" required value="Ekor" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Satuan (IDR)</label>
+                            <input type="number" id="income-price" min="0" step="1000" required oninput="calcPreview('income')" placeholder="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="lg:col-span-2 flex flex-col justify-end">
+                            <div class="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex justify-between items-center">
+                                <span class="text-xs text-slate-500">Total Pemasukan:</span>
+                                <span id="income-preview-total" class="font-bold text-emerald-600 text-sm">Rp0</span>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-6 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-save"></i> Simpan Pemasukan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Pemasukan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800">Daftar Pemasukan Peternakan</h3>
+                        <span class="text-sm font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">Total: <span id="table-total-income">Rp0</span></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">Tanggal</th>
+                                    <th class="py-3 px-4">Kategori</th>
+                                    <th class="py-3 px-4">Keterangan</th>
+                                    <th class="py-3 px-4 text-center">Jumlah</th>
+                                    <th class="py-3 px-4 text-right">Harga Satuan</th>
+                                    <th class="py-3 px-4 text-right">Total Harga</th>
+                                    <th class="py-3 px-4 text-center">Jenis</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-income" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 4: DATA INVENTARIS BURUNG              -->
+            <!-- ========================================== -->
+            <section id="section-inventaris" class="tab-section hidden space-y-6">
+                <!-- Form Input Burung -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></span>
+                        Tambah Data Inventaris Burung Kenari
+                    </h3>
+                    <form onsubmit="addBird(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Identitas / Ring</label>
+                            <input type="text" id="bird-id" required placeholder="Contoh: GRF-001" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Kenari</label>
+                            <input type="text" id="bird-type" required placeholder="Contoh: AF / F1 YS / Lokal / Yorkshire" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Warna</label>
+                            <input type="text" id="bird-color" required placeholder="Contoh: Kuning Cerah / Bon / Panda" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Kelamin</label>
+                            <select id="bird-gender" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Jantan">Jantan</option>
+                                <option value="Betina">Betina</option>
+                                <option value="Belum Terdeteksi (Anakan)">Belum Terdeteksi (Anakan)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Umur / Tanggal Menetas</label>
+                            <input type="text" id="bird-age" required placeholder="Contoh: 8 Bulan / Tetas 12-10-2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Asal Burung</label>
+                            <input type="text" id="bird-origin" required placeholder="Contoh: Beli Peternak A / Hasil Ternak GRF" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Pembelian / Nilai Aset (IDR)</label>
+                            <input type="number" id="bird-price" min="0" step="1000" required value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Status Burung</label>
+                            <select id="bird-status" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
+                                <option value="Indukan">Indukan</option>
+                                <option value="Pejantan">Pejantan</option>
+                                <option value="Betina">Betina</option>
+                                <option value="Anakan">Anakan</option>
+                                <option value="Afkir">Afkir</option>
+                                <option value="Terjual">Terjual (Non-Aktif)</option>
+                                <option value="Mati">Mati (Non-Aktif)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Kondisi Kesehatan</label>
+                            <input type="text" id="bird-health" required value="Sehat & Aktif" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-save"></i> Simpan Data Burung
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Inventaris Burung -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                        <h3 class="font-bold text-slate-800">Database Populasi & Aset Hidup</h3>
+                        <div class="flex gap-2">
+                            <span class="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl">Populasi Aktif: <span id="inv-active-count" class="text-emerald-700">0</span> Ekor</span>
+                            <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">Nilai Aset: <span id="inv-total-value">Rp0</span></span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">No. ID / Ring</th>
+                                    <th class="py-3 px-4">Jenis & Warna</th>
+                                    <th class="py-3 px-4">Kelamin</th>
+                                    <th class="py-3 px-4">Umur</th>
+                                    <th class="py-3 px-4">Asal Burung</th>
+                                    <th class="py-3 px-4 text-right">Harga Beli/Aset</th>
+                                    <th class="py-3 px-4 text-center">Status</th>
+                                    <th class="py-3 px-4">Kesehatan</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-birds" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 5: CATATAN PERKEMBANGBIAKAN            -->
+            <!-- ========================================== -->
+            <section id="section-breeding" class="tab-section hidden space-y-6">
+                <!-- Form Input Breeding -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></span>
+                        Catat Siklus Perkembangbiakan (Breeding Log)
+                    </h3>
+                    <form onsubmit="addBreeding(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Pasangan Indukan</label>
+                            <input type="text" id="breed-pair" required placeholder="Contoh: PSG-01 (GRF-01 x GRF-02)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Penjodohan</label>
+                            <input type="date" id="breed-mate-date" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Bertelur (Pertama)</label>
+                            <input type="date" id="breed-egg-date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Anakan Keluar Sarang</label>
+                            <input type="date" id="breed-fledge-date" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Telur</label>
+                            <input type="number" id="breed-eggs" min="0" value="0" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Telur Menetas</label>
+                            <input type="number" id="breed-hatched" min="0" value="0" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Anakan Hidup</label>
+                            <input type="number" id="breed-alive" min="0" value="0" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Anakan Mati</label>
+                            <input type="number" id="breed-dead" min="0" value="0" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-4">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Riwayat Produksi / Catatan Pasangan</label>
+                            <input type="text" id="breed-notes" placeholder="Contoh: Produksi ke-1, indukan meloloh sangat baik, 1 telur zonk" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-4 flex justify-end">
+                            <button type="submit" class="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-save"></i> Simpan Catatan Breeding
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabel Perkembangbiakan -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                        <h3 class="font-bold text-slate-800">Log Produksi & Penetasan Indukan</h3>
+                        <div class="flex flex-wrap gap-2 text-xs font-semibold">
+                            <span class="bg-slate-100 px-3 py-1 rounded-lg">Telur: <strong id="breed-sum-eggs">0</strong></span>
+                            <span class="bg-amber-50 text-amber-800 px-3 py-1 rounded-lg">Menetas: <strong id="breed-sum-hatched">0</strong></span>
+                            <span class="bg-emerald-50 text-emerald-800 px-3 py-1 rounded-lg">Hidup: <strong id="breed-sum-alive">0</strong></span>
+                            <span class="bg-rose-50 text-rose-800 px-3 py-1 rounded-lg">Mati: <strong id="breed-sum-dead">0</strong></span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4">Pasangan</th>
+                                    <th class="py-3 px-4">Tgl Jodoh</th>
+                                    <th class="py-3 px-4">Tgl Bertelur</th>
+                                    <th class="py-3 px-4 text-center">Telur</th>
+                                    <th class="py-3 px-4 text-center">Menetas</th>
+                                    <th class="py-3 px-4 text-center">Hidup / Mati</th>
+                                    <th class="py-3 px-4">Keluar Sarang</th>
+                                    <th class="py-3 px-4">Riwayat Produksi</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-breeding" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- TAB 6: LAPORAN EVALUASI & KPI              -->
+            <!-- ========================================== -->
+            <section id="section-evaluasi" class="tab-section hidden space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-900 text-lg"><i class="fa-solid fa-magnifying-glass-chart text-emerald-600 mr-2"></i>Laporan Evaluasi Operasional & Kesehatan Bisnis</h3>
+                        <p class="text-xs text-slate-500 mt-1">Indikator Kinerja Utama (KPI) dihitung secara otomatis dari seluruh pembukuan dan data ternak GAGAK RIMANG FARM.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
+                        <!-- KPI 1: Efisiensi Biaya Pakan -->
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-slate-500">1. Efisiensi Biaya Pakan</span>
+                                    <span id="kpi-feed-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Belum ada data</span>
+                                </div>
+                                <h4 id="kpi-feed-val" class="text-3xl font-bold text-slate-900 my-2">0%</h4>
+                                <p class="text-xs text-slate-600">Proporsi biaya pakan (Bijian, Telur Puyuh, Sayur/Buah, Egg Food) terhadap total OPEX.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                                Target Ideal: <strong>Maksimal 60% - 70%</strong> dari total biaya operasional.
+                            </div>
+                        </div>
+
+                        <!-- KPI 2: Biaya Perawatan Burung -->
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-slate-500">2. Biaya Perawatan / Ekor</span>
+                                    <span id="kpi-care-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">HPP Ternak</span>
+                                </div>
+                                <h4 id="kpi-care-val" class="text-3xl font-bold text-slate-900 my-2">Rp0</h4>
+                                <p class="text-xs text-slate-600">Rata-rata biaya operasional dibagi total populasi burung aktif saat ini.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                                Digunakan sebagai acuan batas bawah harga jual anakan/dewasa.
+                            </div>
+                        </div>
+
+                        <!-- KPI 3: Tingkat Keberhasilan Penetasan -->
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-slate-500">3. Keberhasilan Penetasan</span>
+                                    <span id="kpi-hatch-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Belum ada data</span>
+                                </div>
+                                <h4 id="kpi-hatch-val" class="text-3xl font-bold text-slate-900 my-2">0%</h4>
+                                <p class="text-xs text-slate-600">Persentase jumlah telur menetas dibanding total telur yang dihasilkan.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                                Target Ideal: <strong>Minimal 75% - 85%</strong> tingkat penetasan.
+                            </div>
+                        </div>
+
+                        <!-- KPI 4: Produktivitas Pasangan -->
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-slate-500">4. Produktivitas Pasangan</span>
+                                    <span id="kpi-prod-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Output Indukan</span>
+                                </div>
+                                <h4 id="kpi-prod-val" class="text-3xl font-bold text-slate-900 my-2">0 <span class="text-base font-normal text-slate-500">ekor/siklus</span></h4>
+                                <p class="text-xs text-slate-600">Rata-rata anakan hidup yang berhasil dipanen per pencatatan siklus pasangan.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                                Target Ideal: <strong>3 - 4 ekor anakan hidup</strong> per siklus penetasan.
+                            </div>
+                        </div>
+
+                        <!-- KPI 5: Keuntungan Penjualan -->
+                        <div class="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-slate-500">5. Margin Keuntungan</span>
+                                    <span id="kpi-margin-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Belum ada data</span>
+                                </div>
+                                <h4 id="kpi-margin-val" class="text-3xl font-bold text-slate-900 my-2">0%</h4>
+                                <p class="text-xs text-slate-600">Persentase laba operasional bersih dibandingkan total pemasukan penjualan.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-200/80 text-[11px] text-slate-500">
+                                Target Ideal: <strong>Positif (&gt; 20%)</strong> untuk keberlanjutan farm.
+                            </div>
+                        </div>
+
+                        <!-- KPI 6: Kondisi Keuangan Peternakan -->
+                        <div class="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold uppercase text-emerald-800">6. Status Kesehatan Kas</span>
+                                    <span id="kpi-health-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900">Tahap Awal</span>
+                                </div>
+                                <h4 id="kpi-health-status" class="text-xl font-bold text-emerald-950 my-2">Siap Pencatatan</h4>
+                                <p id="kpi-health-desc" class="text-xs text-emerald-800">Belum ada transaksi tercatat. Saldo awal Rp0.</p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-emerald-200/80 text-[11px] text-emerald-700">
+                                Evaluasi otomatis berdasarkan likuiditas kas & rasio BEP.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // =========================================================================
+        // STATE MANAGEMENT (AUTO-SAVED TO LOCALSTORAGE, INITIALIZED AT RP 0)
+        // =========================================================================
+        const STORAGE_KEY = 'gagak_rimang_farm_db_v1';
+
+        const state = {
+            initialCapital: 0,
+            transactions: [], // { id, type: 'CAPEX'|'OPEX'|'INCOME', date, category, desc, qty, unit, price, total }
+            birds: [],        // { id, ringId, type, color, gender, age, origin, price, status, health }
+            breedings: []     // { id, pair, mateDate, eggDate, fledgeDate, eggs, hatched, alive, dead, notes }
+        };
+
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.initialCapital = Number(parsed.initialCapital) || 0;
+                    state.transactions = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+                    state.birds = Array.isArray(parsed.birds) ? parsed.birds : [];
+                    state.breedings = Array.isArray(parsed.breedings) ? parsed.breedings : [];
+                }
+            } catch (err) {
+                console.error('Gagal memuat data lokal:', err);
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (err) {
+                console.error('Gagal menyimpan data lokal:', err);
+            }
+        }
+
+        // =========================================================================
+        // INITIALIZATION & NAVIGATION
+        // =========================================================================
+        window.onload = function() {
+            loadFromStorage();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('capex-date').value = today;
+            document.getElementById('opex-date').value = today;
+            document.getElementById('income-date').value = today;
+            document.getElementById('breed-mate-date').value = today;
+            renderAll();
+        };
+
+        const tabMeta = {
+            dashboard: { title: 'Dashboard & Laporan Keuangan', subtitle: 'Ringkasan arus kas, aset, dan profitabilitas GAGAK RIMANG FARM secara real-time.' },
+            pembangunan: { title: '1. Pembukuan Pembangunan Aviary', subtitle: 'Pencatatan investasi fisik kandang & perlengkapan (CAPEX - Tanpa Tanah).' },
+            operasional: { title: '2. Pembukuan Pengeluaran Harian', subtitle: 'Pencatatan pakan, vitamin, obat, kebersihan, dan operasional rutin (OPEX).' },
+            pemasukan: { title: '3. Pembukuan Pemasukan', subtitle: 'Pencatatan hasil penjualan anakan, dewasa, indukan, telur, dan burung afkir.' },
+            inventaris: { title: '4. Data Inventaris Burung', subtitle: 'Database nomor identitas, silsilah, nilai aset hidup, dan status kesehatan kenari.' },
+            breeding: { title: '5. Catatan Perkembangbiakan', subtitle: 'Log penjodohan, penetasan telur, anakan hidup/mati, dan riwayat pasangan.' },
+            evaluasi: { title: '7. Laporan Evaluasi & KPI Farm', subtitle: 'Analisis efisiensi pakan, keberhasilan penetasan, dan kesehatan finansial peternakan.' }
+        };
+
+        function switchTab(tabId) {
+            // Hide all sections
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+            // Show target section
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+
+            // Update nav styling
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('tab-active'));
+            document.getElementById(`nav-${tabId}`).classList.add('tab-active');
+
+            // Update header titles
+            document.getElementById('page-title').textContent = tabMeta[tabId].title;
+            document.getElementById('page-subtitle').textContent = tabMeta[tabId].subtitle;
+
+            // Close mobile sidebar if open
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+                toggleMobileSidebar();
+            }
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        // =========================================================================
+        // FORMATTING HELPERS
+        // =========================================================================
+        function formatIDR(amount) {
+            const num = Number(amount) || 0;
+            const prefix = num < 0 ? '-Rp' : 'Rp';
+            return prefix + Math.abs(num).toLocaleString('id-ID');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-800' : (type === 'danger' ? 'bg-rose-700' : 'bg-slate-800');
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-info';
+            
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-xs font-medium transform transition-all duration-300 translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Custom Confirm Modal Logic
+        let pendingConfirmCallback = null;
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            pendingConfirmCallback = onConfirm;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            pendingConfirmCallback = null;
+        }
+
+        document.getElementById('confirm-yes-btn').addEventListener('click', () => {
+            if (pendingConfirmCallback) pendingConfirmCallback();
+            closeConfirmModal();
+        });
+
+        // Initial Capital Modal
+        function openCapitalModal() {
+            document.getElementById('input-initial-capital').value = state.initialCapital;
+            const modal = document.getElementById('capital-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCapitalModal() {
+            const modal = document.getElementById('capital-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveInitialCapital(e) {
+            e.preventDefault();
+            const val = parseFloat(document.getElementById('input-initial-capital').value) || 0;
+            state.initialCapital = val;
+            closeCapitalModal();
+            renderAll();
+            showToast('Modal awal disetor berhasil diperbarui.');
+        }
+
+        // =========================================================================
+        // CRUD OPERATIONS: TRANSACTIONS (CAPEX, OPEX, INCOME)
+        // =========================================================================
+        function calcPreview(prefix) {
+            const qty = parseFloat(document.getElementById(`${prefix}-qty`).value) || 0;
+            const price = parseFloat(document.getElementById(`${prefix}-price`).value) || 0;
+            document.getElementById(`${prefix}-preview-total`).textContent = formatIDR(qty * price);
+        }
+
+        function addTransaction(e, type) {
+            e.preventDefault();
+            const prefix = type.toLowerCase();
+            const date = document.getElementById(`${prefix}-date`).value;
+            const category = document.getElementById(`${prefix}-category`).value;
+            const desc = document.getElementById(`${prefix}-desc`).value.trim();
+            const qty = parseFloat(document.getElementById(`${prefix}-qty`).value) || 0;
+            const unit = document.getElementById(`${prefix}-unit`).value.trim();
+            const price = parseFloat(document.getElementById(`${prefix}-price`).value) || 0;
+            const total = qty * price;
+
+            state.transactions.push({
+                id: crypto.randomUUID(),
+                type,
+                date,
+                category,
+                desc,
+                qty,
+                unit,
+                price,
+                total
+            });
+
+            // Reset inputs except date
+            document.getElementById(`${prefix}-desc`).value = '';
+            document.getElementById(`${prefix}-qty`).value = '1';
+            document.getElementById(`${prefix}-price`).value = '';
+            calcPreview(prefix);
+
+            renderAll();
+            showToast('Transaksi berhasil dicatat ke pembukuan.');
+        }
+
+        function deleteTransaction(id) {
+            openConfirmModal(
+                'Hapus Transaksi',
+                'Apakah Anda yakin ingin menghapus catatan transaksi ini dari pembukuan?',
+                () => {
+                    state.transactions = state.transactions.filter(t => t.id !== id);
+                    renderAll();
+                    showToast('Transaksi berhasil dihapus.', 'danger');
+                }
+            );
+        }
+
+        // =========================================================================
+        // CRUD OPERATIONS: BIRDS INVENTORY
+        // =========================================================================
+        function addBird(e) {
+            e.preventDefault();
+            state.birds.push({
+                id: crypto.randomUUID(),
+                ringId: document.getElementById('bird-id').value.trim(),
+                type: document.getElementById('bird-type').value.trim(),
+                color: document.getElementById('bird-color').value.trim(),
+                gender: document.getElementById('bird-gender').value,
+                age: document.getElementById('bird-age').value.trim(),
+                origin: document.getElementById('bird-origin').value.trim(),
+                price: parseFloat(document.getElementById('bird-price').value) || 0,
+                status: document.getElementById('bird-status').value,
+                health: document.getElementById('bird-health').value.trim()
+            });
+
+            e.target.reset();
+            document.getElementById('bird-price').value = '0';
+            document.getElementById('bird-health').value = 'Sehat & Aktif';
+            renderAll();
+            showToast('Data burung berhasil ditambahkan ke inventaris.');
+        }
+
+        function deleteBird(id) {
+            openConfirmModal(
+                'Hapus Data Burung',
+                'Hapus burung ini dari tabel inventaris?',
+                () => {
+                    state.birds = state.birds.filter(b => b.id !== id);
+                    renderAll();
+                    showToast('Data burung dihapus.', 'danger');
+                }
+            );
+        }
+
+        // =========================================================================
+        // CRUD OPERATIONS: BREEDING LOG
+        // =========================================================================
+        function addBreeding(e) {
+            e.preventDefault();
+            state.breedings.push({
+                id: crypto.randomUUID(),
+                pair: document.getElementById('breed-pair').value.trim(),
+                mateDate: document.getElementById('breed-mate-date').value,
+                eggDate: document.getElementById('breed-egg-date').value || '-',
+                fledgeDate: document.getElementById('breed-fledge-date').value || '-',
+                eggs: parseInt(document.getElementById('breed-eggs').value) || 0,
+                hatched: parseInt(document.getElementById('breed-hatched').value) || 0,
+                alive: parseInt(document.getElementById('breed-alive').value) || 0,
+                dead: parseInt(document.getElementById('breed-dead').value) || 0,
+                notes: document.getElementById('breed-notes').value.trim() || '-'
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            e.target.reset();
+            document.getElementById('breed-mate-date').value = today;
+            document.getElementById('breed-eggs').value = '0';
+            document.getElementById('breed-hatched').value = '0';
+            document.getElementById('breed-alive').value = '0';
+            document.getElementById('breed-dead').value = '0';
+
+            renderAll();
+            showToast('Catatan perkembangbiakan berhasil disimpan.');
+        }
+
+        function deleteBreeding(id) {
+            openConfirmModal(
+                'Hapus Log Breeding',
+                'Apakah Anda yakin ingin menghapus catatan perkembangbiakan ini?',
+                () => {
+                    state.breedings = state.breedings.filter(b => b.id !== id);
+                    renderAll();
+                    showToast('Catatan breeding dihapus.', 'danger');
+                }
+            );
+        }
+
+        // =========================================================================
+        // RENDERING & AUTOMATIC CALCULATIONS ENGINE
+        // =========================================================================
+        function renderAll() {
+            // Simpan otomatis setiap kali ada perubahan data
+            saveToStorage();
+
+            // Sort transactions by date descending
+            const sortedTx = [...state.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const capexList = sortedTx.filter(t => t.type === 'CAPEX');
+            const opexList = sortedTx.filter(t => t.type === 'OPEX');
+            const incomeList = sortedTx.filter(t => t.type === 'INCOME');
+
+            const totalCapex = capexList.reduce((sum, t) => sum + t.total, 0);
+            const totalOpex = opexList.reduce((sum, t) => sum + t.total, 0);
+            const totalIncome = incomeList.reduce((sum, t) => sum + t.total, 0);
+
+            // Cash & Profit Calculations
+            const saldoKas = (state.initialCapital + totalIncome) - (totalCapex + totalOpex);
+            const profitOp = totalIncome - totalOpex;
+            const profitNet = totalIncome - (totalCapex + totalOpex);
+
+            // Bird Assets (Active birds: not Terjual & not Mati)
+            const activeBirds = state.birds.filter(b => b.status !== 'Terjual' && b.status !== 'Mati');
+            const totalBirdAssetValue = activeBirds.reduce((sum, b) => sum + b.price, 0);
+
+            // Total Farm Asset = Physical Aviary (CAPEX) + Live Birds + Cash Balance (if positive)
+            const totalFarmAssets = totalCapex + totalBirdAssetValue + Math.max(0, saldoKas);
+
+            // Update Header & Dashboard Cards
+            document.getElementById('header-capital-display').textContent = formatIDR(state.initialCapital);
+            document.getElementById('dash-saldo-kas').textContent = formatIDR(saldoKas);
+            document.getElementById('dash-total-capex').textContent = formatIDR(totalCapex);
+            document.getElementById('dash-total-opex').textContent = formatIDR(totalOpex);
+            document.getElementById('dash-total-income').textContent = formatIDR(totalIncome);
+
+            // Update Financial Statement Table
+            document.getElementById('rep-modal-awal').textContent = formatIDR(state.initialCapital);
+            document.getElementById('rep-capex').textContent = formatIDR(totalCapex);
+            document.getElementById('rep-opex').textContent = formatIDR(totalOpex);
+            document.getElementById('rep-income').textContent = formatIDR(totalIncome);
+            
+            const elProfitOp = document.getElementById('rep-profit-op');
+            elProfitOp.textContent = formatIDR(profitOp);
+            elProfitOp.className = `py-3.5 px-5 text-right font-bold ${profitOp >= 0 ? 'text-emerald-700' : 'text-rose-600'}`;
+
+            const elProfitNet = document.getElementById('rep-profit-net');
+            elProfitNet.textContent = formatIDR(profitNet);
+            elProfitNet.className = `py-3.5 px-5 text-right font-bold ${profitNet >= 0 ? 'text-emerald-700' : 'text-rose-600'}`;
+
+            document.getElementById('rep-total-aset').textContent = formatIDR(totalFarmAssets);
+
+            // Update Table Totals
+            document.getElementById('table-total-capex').textContent = formatIDR(totalCapex);
+            document.getElementById('table-total-opex').textContent = formatIDR(totalOpex);
+            document.getElementById('table-total-income').textContent = formatIDR(totalIncome);
+
+            // Render Individual Transaction Tables
+            renderTxTable('tbody-capex', capexList, 'Pengeluaran');
+            renderTxTable('tbody-opex', opexList, 'Pengeluaran');
+            renderTxTable('tbody-income', incomeList, 'Pemasukan');
+
+            // Render Combined Ledger
+            renderCombinedLedger(sortedTx);
+
+            // Render Periodic Cashflow Recaps
+            renderPeriodicRecaps(sortedTx);
+
+            // Render Birds Inventory
+            renderBirdsTable(activeBirds, totalBirdAssetValue);
+
+            // Render Breeding Table
+            renderBreedingTable();
+
+            // Render Evaluation & KPIs
+            renderKPIs(opexList, totalOpex, totalIncome, profitOp, saldoKas, activeBirds.length);
+        }
+
+        function renderTxTable(tbodyId, list, txKindLabel) {
+            const tbody = document.getElementById(tbodyId);
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400 text-sm">Belum ada transaksi tercatat (Rp0).</td></tr>`;
+                return;
+            }
+            const badgeClass = txKindLabel === 'Pemasukan' 
+                ? 'bg-emerald-100 text-emerald-800' 
+                : 'bg-rose-100 text-rose-800';
+
+            tbody.innerHTML = list.map(t => `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="py-3 px-4 whitespace-nowrap text-slate-600">${t.date}</td>
+                    <td class="py-3 px-4 font-medium text-slate-800">${t.category}</td>
+                    <td class="py-3 px-4 text-slate-600">${t.desc}</td>
+                    <td class="py-3 px-4 text-center whitespace-nowrap">${t.qty} ${t.unit}</td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap">${formatIDR(t.price)}</td>
+                    <td class="py-3 px-4 text-right font-bold whitespace-nowrap text-slate-900">${formatIDR(t.total)}</td>
+                    <td class="py-3 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${badgeClass}">${txKindLabel}</span></td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderCombinedLedger(sortedTx) {
+            const filter = document.getElementById('filter-ledger-type').value;
+            const filtered = filter === 'ALL' ? sortedTx : sortedTx.filter(t => t.type === filter);
+            const tbody = document.getElementById('tbody-all-ledger');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400 text-sm">Tidak ada riwayat transaksi untuk filter ini.</td></tr>`;
+                return;
+            }
+
+            const modMap = {
+                CAPEX: '<span class="text-amber-700 font-semibold">Pembangunan</span>',
+                OPEX: '<span class="text-rose-700 font-semibold">Operasional</span>',
+                INCOME: '<span class="text-emerald-700 font-semibold">Pemasukan</span>'
+            };
+
+            tbody.innerHTML = filtered.map(t => {
+                const isInc = t.type === 'INCOME';
+                return `
+                    <tr class="hover:bg-slate-50/80">
+                        <td class="py-3 px-4 whitespace-nowrap text-slate-600">${t.date}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-xs">${modMap[t.type]}</td>
+                        <td class="py-3 px-4 font-medium text-slate-800">${t.category}</td>
+                        <td class="py-3 px-4 text-slate-600">${t.desc}</td>
+                        <td class="py-3 px-4 text-center whitespace-nowrap">${t.qty} ${t.unit}</td>
+                        <td class="py-3 px-4 text-right whitespace-nowrap">${formatIDR(t.price)}</td>
+                        <td class="py-3 px-4 text-right font-bold whitespace-nowrap ${isInc ? 'text-emerald-700' : 'text-slate-900'}">${formatIDR(t.total)}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${isInc ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                                ${isInc ? 'Pemasukan' : 'Pengeluaran'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPeriodicRecaps(sortedTx) {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentMonthPrefix = todayStr.slice(0, 7); // YYYY-MM
+            const currentYearPrefix = todayStr.slice(0, 4);  // YYYY
+
+            // 7 days ago
+            const sevenDaysAgo = new Date(now);
+            sevenDaysAgo.setDate(now.getDate() - 7);
+            const sevenDaysStr = sevenDaysAgo.toISOString().split('T')[0];
+
+            document.getElementById('label-today').textContent = todayStr;
+            document.getElementById('label-month').textContent = currentMonthPrefix;
+            document.getElementById('label-year').textContent = currentYearPrefix;
+
+            const calcPeriod = (filterFn) => {
+                let inc = 0, out = 0;
+                sortedTx.filter(filterFn).forEach(t => {
+                    if (t.type === 'INCOME') inc += t.total;
+                    else out += t.total;
+                });
+                return { inc, out, net: inc - out };
+            };
+
+            const day = calcPeriod(t => t.date === todayStr);
+            const week = calcPeriod(t => t.date >= sevenDaysStr && t.date <= todayStr);
+            const month = calcPeriod(t => t.date.startsWith(currentMonthPrefix));
+            const year = calcPeriod(t => t.date.startsWith(currentYearPrefix));
+
+            const updateBox = (prefix, data) => {
+                document.getElementById(`recap-${prefix}-in`).textContent = formatIDR(data.inc);
+                document.getElementById(`recap-${prefix}-out`).textContent = formatIDR(data.out);
+                const netEl = document.getElementById(`recap-${prefix}-net`);
+                netEl.textContent = formatIDR(data.net);
+                netEl.className = `text-xs font-bold ${data.net >= 0 ? 'text-emerald-700' : 'text-rose-600'}`;
+            };
+
+            updateBox('day', day);
+            updateBox('week', week);
+            updateBox('month', month);
+            updateBox('year', year);
+        }
+
+        function renderBirdsTable(activeBirds, totalValue) {
+            document.getElementById('inv-active-count').textContent = activeBirds.length;
+            document.getElementById('inv-total-value').textContent = formatIDR(totalValue);
+
+            const tbody = document.getElementById('tbody-birds');
+            if (state.birds.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400 text-sm">Belum ada data inventaris burung kenari.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.birds.map(b => {
+                const isInactive = b.status === 'Terjual' || b.status === 'Mati';
+                const statusColor = isInactive ? 'bg-slate-200 text-slate-600' : (b.status === 'Afkir' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800');
+                return `
+                    <tr class="hover:bg-slate-50/80 ${isInactive ? 'opacity-60' : ''}">
+                        <td class="py-3 px-4 font-bold text-slate-900">${b.ringId}</td>
+                        <td class="py-3 px-4"><div class="font-medium text-slate-800">${b.type}</div><div class="text-xs text-slate-500">${b.color}</div></td>
+                        <td class="py-3 px-4 text-slate-700">${b.gender}</td>
+                        <td class="py-3 px-4 text-slate-600">${b.age}</td>
+                        <td class="py-3 px-4 text-slate-600">${b.origin}</td>
+                        <td class="py-3 px-4 text-right font-semibold text-slate-800">${formatIDR(b.price)}</td>
+                        <td class="py-3 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${statusColor}">${b.status}</span></td>
+                        <td class="py-3 px-4 text-xs text-slate-600">${b.health}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteBird('${b.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderBreedingTable() {
+            const sumEggs = state.breedings.reduce((s, b) => s + b.eggs, 0);
+            const sumHatched = state.breedings.reduce((s, b) => s + b.hatched, 0);
+            const sumAlive = state.breedings.reduce((s, b) => s + b.alive, 0);
+            const sumDead = state.breedings.reduce((s, b) => s + b.dead, 0);
+
+            document.getElementById('breed-sum-eggs').textContent = sumEggs;
+            document.getElementById('breed-sum-hatched').textContent = sumHatched;
+            document.getElementById('breed-sum-alive').textContent = sumAlive;
+            document.getElementById('breed-sum-dead').textContent = sumDead;
+
+            const tbody = document.getElementById('tbody-breeding');
+            if (state.breedings.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400 text-sm">Belum ada catatan perkembangbiakan pasangan indukan.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = state.breedings.map(b => `
+                <tr class="hover:bg-slate-50/80">
+                    <td class="py-3 px-4 font-bold text-slate-900">${b.pair}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-slate-600">${b.mateDate}</td>
+                    <td class="py-3 px-4 whitespace-nowrap text-slate-600">${b.eggDate}</td>
+                    <td class="py-3 px-4 text-center font-semibold">${b.eggs}</td>
+                    <td class="py-3 px-4 text-center font-semibold text-amber-700">${b.hatched}</td>
+                    <td class="py-3 px-4 text-center whitespace-nowrap">
+                        <span class="text-emerald-700 font-bold">${b.alive} Hidup</span> / <span class="text-rose-600">${b.dead} Mati</span>
+                    </td>
+                    <td class="py-3 px-4 whitespace-nowrap text-slate-600">${b.fledgeDate}</td>
+                    <td class="py-3 px-4 text-xs text-slate-600">${b.notes}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="deleteBreeding('${b.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" title="Hapus">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderKPIs(opexList, totalOpex, totalIncome, profitOp, saldoKas, activeBirdCount) {
+            // 1. Feed Efficiency
+            const feedCategories = ['Pakan Bijian', 'Telur Puyuh', 'Sayuran dan Buah', 'Egg Food'];
+            const totalFeedCost = opexList.filter(t => feedCategories.includes(t.category)).reduce((s, t) => s + t.total, 0);
+            const feedRatio = totalOpex > 0 ? ((totalFeedCost / totalOpex) * 100).toFixed(1) : 0;
+            
+            document.getElementById('kpi-feed-val').textContent = `${feedRatio}%`;
+            const feedBadge = document.getElementById('kpi-feed-badge');
+            if (totalOpex === 0) {
+                feedBadge.textContent = 'Belum ada data';
+                feedBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700';
+            } else if (feedRatio <= 70) {
+                feedBadge.textContent = 'Efisien (Ideal)';
+                feedBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            } else {
+                feedBadge.textContent = 'Perlu Evaluasi';
+                feedBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+            }
+
+            // 2. Care Cost per Bird
+            const carePerBird = activeBirdCount > 0 ? Math.round(totalOpex / activeBirdCount) : 0;
+            document.getElementById('kpi-care-val').textContent = formatIDR(carePerBird);
+
+            // 3. Hatching Success Rate
+            const totalEggs = state.breedings.reduce((s, b) => s + b.eggs, 0);
+            const totalHatched = state.breedings.reduce((s, b) => s + b.hatched, 0);
+            const hatchRate = totalEggs > 0 ? ((totalHatched / totalEggs) * 100).toFixed(1) : 0;
+            document.getElementById('kpi-hatch-val').textContent = `${hatchRate}%`;
+            
+            const hatchBadge = document.getElementById('kpi-hatch-badge');
+            if (totalEggs === 0) {
+                hatchBadge.textContent = 'Belum ada data';
+                hatchBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700';
+            } else if (hatchRate >= 75) {
+                hatchBadge.textContent = 'Sangat Baik';
+                hatchBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            } else {
+                hatchBadge.textContent = 'Di Bawah Target';
+                hatchBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800';
+            }
+
+            // 4. Pair Productivity (Average alive chicks per breeding record)
+            const totalAlive = state.breedings.reduce((s, b) => s + b.alive, 0);
+            const avgProd = state.breedings.length > 0 ? (totalAlive / state.breedings.length).toFixed(1) : 0;
+            document.getElementById('kpi-prod-val').innerHTML = `${avgProd} <span class="text-base font-normal text-slate-500">ekor/siklus</span>`;
+
+            // 5. Profit Margin
+            const margin = totalIncome > 0 ? ((profitOp / totalIncome) * 100).toFixed(1) : 0;
+            document.getElementById('kpi-margin-val').textContent = `${margin}%`;
+            const marginBadge = document.getElementById('kpi-margin-badge');
+            if (totalIncome === 0) {
+                marginBadge.textContent = 'Belum ada penjualan';
+                marginBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700';
+            } else if (profitOp > 0) {
+                marginBadge.textContent = 'Profit / Untung';
+                marginBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            } else {
+                marginBadge.textContent = 'Defisit Operasional';
+                marginBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800';
+            }
+
+            // 6. Overall Financial Health Status
+            const healthStatus = document.getElementById('kpi-health-status');
+            const healthDesc = document.getElementById('kpi-health-desc');
+            const healthBadge = document.getElementById('kpi-health-badge');
+
+            if (state.transactions.length === 0 && state.initialCapital === 0) {
+                healthBadge.textContent = 'Tahap Awal';
+                healthStatus.textContent = 'Siap Pencatatan (Rp0)';
+                healthDesc.textContent = 'Mulai masukkan modal awal dan biaya pembangunan aviary.';
+            } else if (saldoKas < 0) {
+                healthBadge.textContent = 'Peringatan Kas';
+                healthBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-200 text-rose-900';
+                healthStatus.textContent = 'Saldo Kas Minus';
+                healthDesc.textContent = 'Pengeluaran melebihi modal awal & pemasukan. Segera sesuaikan modal disetor.';
+            } else if (profitOp > 0) {
+                healthBadge.textContent = 'Sehat & Produktif';
+                healthBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900';
+                healthStatus.textContent = 'Operasional Menguntungkan';
+                healthDesc.textContent = 'Pemasukan penjualan sudah melampaui biaya operasional harian.';
+            } else {
+                healthBadge.textContent = 'Fase Investasi';
+                healthBadge.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900';
+                healthStatus.textContent = 'Fase Pembangunan / Pembesaran';
+                healthDesc.textContent = 'Kas terkendali. Fokus pada efisiensi pakan dan produktivitas indukan.';
+            }
+        }
+
+        // =========================================================================
+        // EXPORT TO CSV (EXCEL COMPATIBLE)
+        // =========================================================================
+        function exportAllToCSV() {
+            let csv = "LAPORAN PEMBUKUAN HARIAN - GAGAK RIMANG FARM\n\n";
+            csv += "1. RIWAYAT TRANSAKSI KEUANGAN\n";
+            csv += "Tanggal,Modul,Kategori,Keterangan,Jumlah,Satuan,Harga Satuan (IDR),Total Harga (IDR),Jenis Transaksi\n";
+            
+            state.transactions.forEach(t => {
+                const modName = t.type === 'CAPEX' ? 'Pembangunan Aviary' : (t.type === 'OPEX' ? 'Operasional Harian' : 'Pemasukan');
+                const txKind = t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran';
+                csv += `"${t.date}","${modName}","${t.category}","${t.desc.replace(/"/g, '""')}",${t.qty},"${t.unit}",${t.price},${t.total},"${txKind}"\n`;
+            });
+
+            csv += "\n2. DATA INVENTARIS BURUNG\n";
+            csv += "No Ring/ID,Jenis Kenari,Warna,Jenis Kelamin,Umur,Asal Burung,Harga Beli/Aset (IDR),Status,Kesehatan\n";
+            state.birds.forEach(b => {
+                csv += `"${b.ringId}","${b.type}","${b.color}","${b.gender}","${b.age}","${b.origin}",${b.price},"${b.status}","${b.health}"\n`;
+            });
+
+            csv += "\n3. CATATAN PERKEMBANGBIAKAN\n";
+            csv += "Pasangan Indukan,Tgl Penjodohan,Tgl Bertelur,Jumlah Telur,Telur Menetas,Anakan Hidup,Anakan Mati,Tgl Keluar Sarang,Riwayat Produksi\n";
+            state.breedings.forEach(br => {
+                csv += `"${br.pair}","${br.mateDate}","${br.eggDate}",${br.eggs},${br.hatched},${br.alive},${br.dead},"${br.fledgeDate}","${br.notes.replace(/"/g, '""')}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Pembukuan_Gagak_Rimang_Farm_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('File CSV berhasil diunduh.');
+        }
+
+        // =========================================================================
+        // BACKUP & RESTORE JSON (FOR CROSS-DEVICE SYNC ON GITHUB PAGES)
+        // =========================================================================
+        function exportBackupJSON() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Backup_GagakRimangFarm_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('File cadangan (Backup JSON) berhasil diunduh.');
+        }
+
+        function importBackupJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (typeof imported === 'object' && imported !== null) {
+                        state.initialCapital = Number(imported.initialCapital) || 0;
+                        state.transactions = Array.isArray(imported.transactions) ? imported.transactions : [];
+                        state.birds = Array.isArray(imported.birds) ? imported.birds : [];
+                        state.breedings = Array.isArray(imported.breedings) ? imported.breedings : [];
+                        renderAll();
+                        showToast('Data pembukuan berhasil dipulihkan!');
+                    } else {
+                        showToast('Format file backup tidak valid.', 'danger');
+                    }
+                } catch (err) {
+                    showToast('Gagal membaca file backup.', 'danger');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
